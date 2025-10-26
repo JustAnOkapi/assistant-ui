@@ -109,6 +109,9 @@ jobs:
           fetch-depth: 1
 
       # Minimize previous bot comments on fork PRs to keep discussion clean
+      # NOTE: Temporary workaround until https://github.com/anthropics/claude-code-action/pull/411 is merged
+      # PR #411 adds sticky_comment_app_bot_id/name config to make sticky comments work with github-actions[bot]
+      # Uses GraphQL script instead of int128/hide-comment-action or step-security fork for no external dependencies
       - name: Minimize previous fork PR comments
         if: |
           github.event_name == 'pull_request_target' &&
