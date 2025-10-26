@@ -14,7 +14,7 @@ on:
 
 env:
   # Shared action configuration
-  TRACK_PROGRESS: 'false'
+  TRACK_PROGRESS: 'true'
   USE_STICKY_COMMENT: 'true'
   ADDITIONAL_PERMISSIONS: |
     actions: read
@@ -26,29 +26,41 @@ env:
     BODY: ${{ github.event.pull_request.body }}
     AUTHOR: ${{ github.event.pull_request.user.login }}
     COMMIT: ${{ github.event.pull_request.head.sha }}
+    Note: The PR branch is already checked out in the current working directory.
 
-    Please review this pull request with a focus on:
+    Gather Context (complete these steps FIRST, silently - don't report on this process):
+    1. Check CI status: Use mcp__github_ci__get_ci_status to see if tests passed/failed
+    2. Get previous reviews: Run gh pr view ${{ github.event.pull_request.number }} --comments
+    3. Identify previous bot reviews and track which issues were raised before
+    4. If CI failed: Use mcp__github_ci__get_workflow_run_details for failure details
+
+    Review Approach:
+    - If first review: Comprehensive analysis of all changes
+    - If previous reviews exist: Focus on changes since last review, track issue status, understand how changes impact pr
+    - Incorporate CI/test failure context into your feedback if relevant
+    - Use inline comments (mcp__github_inline_comment__create_inline_comment) for specific code issues
+
+    Do not include in your review:
+    - Task completion statements ("I completed the review", "Review finished")
+    - Process descriptions ("First I checked X, then I analyzed Y")
+    - Generic meta-commentary about reviewing
+    - Progress tracking
+
+    Review this pull request by individually analysing each of these thoroughly:
     - Code quality and best practices
-      - Code follows our style guide 
-      - No commented-out code
-      - Meaningful variable names
-      - DRY principle followed
     - Potential bugs or issues
     - Security implications
     - Performance considerations
     - Test coverage
-    - Requirements
+    - assistant-ui specific requirements:
       - The PR has a changeset if updating source code of published packages (packages/*)
       - The PR includes documentation if API surface changes
 
-    Note: The PR branch is already checked out in the current working directory.
-
-    Provide a comprehensive review including:
+    Provide a comprehensive review build on previous reviews including:
     - Summary of changes since last review
     - Critical issues found (be thorough)
     - Suggested improvements (be thorough)
     - Good practices observed (be concise - list only the most notable items without elaboration)
-    - Action items for the author
     - Leverage collapsible <details> sections where appropriate for lengthy explanations or code snippets to enhance human readability
 
     When reviewing subsequent commits:
@@ -56,26 +68,18 @@ env:
     - Identify new problems introduced since last review
     - Note if fixes introduced new issues
 
-    IMPORTANT: Be comprehensive about issues and improvements. For good practices, be brief - just note what was done well without explaining why or praising excessively.
+    IMPORTANT: Be comprehensive about issues and improvements. For good practices, be brief - just note what was done well without explaining why or praising excessively. NO meta-commentary about the review process itself.
 
     Use `mcp__github_inline_comment__create_inline_comment` to comment on specific code lines.
-    <comment_tool_info>
-    IMPORTANT: You have been provided with the mcp__github_comment__update_claude_comment tool to update your comment. This tool automatically handles both issue and PR comments.
-    
-    Tool usage example for mcp__github_comment__update_claude_comment:
-    {
-      "body": "Your comment text here"
-    }
-    Only the body parameter is required - the tool automatically knows which comment to update.
-    </comment_tool_info>`}    
+    You have been provided with the mcp__github_comment__update_claude_comment tool to update your comment. This tool automatically handles PR comments. Only the body parameter is required - the tool automatically knows which comment to update.
+
     IMPORTANT: Submit your review feedback by updating the Claude comment using mcp__github_comment__update_claude_comment. This will be displayed as your PR review.
 
   # Allowed tools:
-  # - mcp__github_comment__update_claude_comment: Update Claude's sticky comment (built-in)
   # - mcp__github_inline_comment__create_inline_comment: Create inline code comments
   # - Bash(gh ...): Read-only GitHub CLI commands for PR/issue info
   # Note: gh pr comment is NOT allowed - Claude must use update_claude_comment only
-  CLAUDE_ARGS: '--allowedTools "mcp__github_comment__update_claude_comment,mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+  CLAUDE_ARGS: '--allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
 
 jobs:
   claude-review:
