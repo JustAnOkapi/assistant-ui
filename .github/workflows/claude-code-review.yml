@@ -79,7 +79,7 @@ jobs:
   # Same-repo PRs: Use pull_request trigger + OIDC → claude[bot]
   claude-code-review-internal:
     if: |
-      github.event.pull_request.draft == false && # Skip draft PRs
+      github.event.pull_request.draft == false &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo != null &&
       github.event.pull_request.head.repo.full_name == github.repository
