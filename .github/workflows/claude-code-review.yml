@@ -103,10 +103,80 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: refs/pull/${{ github.event.pull_request.number }}/head
           fetch-depth: 1
+
+      # Minimize previous bot comments on fork PRs to keep discussion clean
+      - name: Minimize previous fork PR comments
+        if: |
+          github.event_name == 'pull_request_target' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/github-script@v8
+        with:
+          script: |
+            try {
+              const owner = context.repo.owner;
+              const repo = context.repo.repo;
+              const prNumber = context.issue.number;
+              let hasNextPage = true;
+              let afterCursor = null;
+              let minimizedCount = 0;
+
+              core.info(`Checking for previous github-actions comments on PR #${prNumber}...`);
+
+              while (hasNextPage) {
+                const { repository } = await github.graphql(`
+                  query($owner: String!, $repo: String!, $prNumber: Int!, $after: String) {
+                    repository(owner: $owner, name: $repo) {
+                      pullRequest(number: $prNumber) {
+                        comments(first: 100, after: $after) {
+                          nodes {
+                            id
+                            author { login }
+                            isMinimized
+                          }
+                          pageInfo {
+                            hasNextPage
+                            endCursor
+                          }
+                        }
+                      }
+                    }
+                  }
+                `, { owner, repo, prNumber, after: afterCursor });
+
+                const comments = repository.pullRequest.comments.nodes;
+                const pageInfo = repository.pullRequest.comments.pageInfo;
+
+                // Filter for non-minimized github-actions comments
+                const botComments = comments.filter(c =>
+                  c.author?.login === 'github-actions' && !c.isMinimized
+                );
+
+                core.info(`Found ${botComments.length} non-minimized bot comment(s) in this batch`);
+
+                // Minimize each bot comment
+                for (const comment of botComments) {
+                  await github.graphql(`
+                    mutation($commentId: ID!) {
+                      minimizeComment(input: { subjectId: $commentId, classifier: OUTDATED }) {
+                        minimizedComment { isMinimized }
+                      }
+                    }
+                  `, { commentId: comment.id });
+                  minimizedCount++;
+                }
+
+                hasNextPage = pageInfo.hasNextPage;
+                afterCursor = pageInfo.endCursor;
+              }
+
+              core.info(`✓ Successfully minimized ${minimizedCount} previous comment(s)`);
+            } catch (error) {
+              core.setFailed(`Failed to minimize comments: ${error.message}`);
+            }
 
       # Same-repo PRs: Use pull_request trigger + OIDC → claude[bot]
       - name: Internal Review
