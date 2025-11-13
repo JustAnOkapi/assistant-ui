@@ -102,14 +102,42 @@ jobs:
       actions: read
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          ref: refs/pull/${{ github.event.pull_request.number }}/head
-          fetch-depth: 1
-      - name: Create local branch reference
-        run: git branch "${{ github.event.pull_request.head.ref }}" HEAD
-
+      # Internal PRs: Use standard approach with refs/pull
+      - name: Checkout repository (internal PR)
+       if: |
+         github.event_name == 'pull_request' &&
+         github.event.pull_request.head.repo.full_name == github.repository
+       uses: actions/checkout@v5
+       with:
+         ref: refs/pull/${{ github.event.pull_request.number }}/head
+         fetch-depth: 1
+      
+      # Fork PRs: Checkout from fork with branch name
+      - name: Checkout repository (fork PR)
+       if: |
+         github.event_name == 'pull_request_target' &&
+         github.event.pull_request.head.repo.full_name != github.repository
+       uses: actions/checkout@v5
+       with:
+         repository: ${{ github.event.pull_request.head.repo.full_name }}
+         ref: ${{ github.event.pull_request.head.ref }}
+         fetch-depth: 1
+         token: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Add fork remote for proper branch tracking
+      - name: Setup fork remote tracking
+       if: |
+         github.event_name == 'pull_request_target' &&
+         github.event.pull_request.head.repo.full_name != github.repository
+       run: |
+         # Add base repo as "upstream" remote for proper context
+         git remote add upstream https://github.com/${{ github.repository }}.git
+         git fetch upstream
+      
+         # Verify we're on the fork branch
+         echo "Current branch: $(git branch --show-current)"
+         echo "Tracking: $(git branch -vv)"
+      
       # Minimize previous bot comments on fork PRs to keep discussion clean
       # NOTE: Temporary workaround until https://github.com/anthropics/claude-code-action/pull/411 is merged
       # PR #411 adds sticky_comment_app_bot_id/name config to make sticky comments work with github-actions[bot]
