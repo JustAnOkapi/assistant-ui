@@ -207,6 +207,6 @@ jobs:
           allowed_non_write_users: '*'
           prompt: ${{ env.REVIEW_PROMPT }}
           use_sticky_comment: ${{ fromJSON(env.USE_STICKY_COMMENT) }}
-          track_progress: ${{ fromJSON(env.TRACK_PROGRESS) }}
+          track_progress: false
           claude_args: ${{ env.CLAUDE_ARGS }}
           additional_permissions: ${{ env.ADDITIONAL_PERMISSIONS }}
