@@ -108,8 +108,7 @@ jobs:
           ref: refs/pull/${{ github.event.pull_request.number }}/head
           fetch-depth: 1
       - name: Create local branch reference
-        if: github.event_name == 'pull_request_target'
-        run: git branch -f "${{ github.event.pull_request.head.ref }}" HEAD
+        run: git branch "${{ github.event.pull_request.head.ref }}" HEAD
 
       # Minimize previous bot comments on fork PRs to keep discussion clean
       # NOTE: Temporary workaround until https://github.com/anthropics/claude-code-action/pull/411 is merged
